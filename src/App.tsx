@@ -77,10 +77,6 @@ function LauncherShell() {
   useEffect(() => {
     try { localStorage.setItem('dsh-launcher:ui-mode', wheelchairMode ? 'wheelchair' : 'classic') } catch { /* 私有模式忽略 */ }
   }, [wheelchairMode])
-  // 转场期间给 html 垫实底：快照旋转露出的区域不透出桌面。
-  useEffect(() => {
-    document.documentElement.classList.toggle('mode-flipping', modeFlip !== null)
-  }, [modeFlip])
   const runModeFlip = useCallback((direction: 'enter' | 'exit') => {
     if (modeFlipRef.current) return
     modeFlipRef.current = direction    // View Transitions 优先：新旧界面各自成快照，真实「卡牌翻面」（Chromium 111+，Electron 43 满足）。
@@ -111,19 +107,12 @@ function LauncherShell() {
     const onWheel = (event: WheelEvent) => {
       if (modeFlipRef.current) return
       // 仅启动界面响应「向下翻入轮椅模式」；退出由轮椅模式主菜单的向上滚轮触发。
+      if (document.querySelector('[aria-modal="true"]')) return
       if (!wheelchairMode && navigation.surface === 'launcher' && event.deltaY > 40) enterWheelchair()
     }
     window.addEventListener('wheel', onWheel, { passive: true })
     return () => window.removeEventListener('wheel', onWheel)
   }, [enterWheelchair, navigation.surface, wheelchairMode])
-  // TEMP(验证用)：F9 翻入轮椅模式
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'F9') enterWheelchair()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [enterWheelchair])
   const [credentialOpen, setCredentialOpen] = useState(false)
   const [githubAccountOpen, setGitHubAccountOpen] = useState(false)
   const [createPackOpen, setCreatePackOpen] = useState(false)
@@ -404,10 +393,10 @@ function LauncherShell() {
   return (
     <>
       <div
-        className={`surface-stage surface-${navigation.surface}${navigation.transitionPhase === 'idle' ? '' : ` is-${navigation.transitionPhase}`}${modeFlip === 'enter' ? ' app-flip-anim app-flip-out' : modeFlip === 'exit' ? ' app-flip-anim app-flip-in' : ''}`}
+        className={`surface-stage surface-${navigation.surface}${navigation.transitionPhase === 'idle' ? '' : ` is-${navigation.transitionPhase}`}${modeFlip ? ' app-flip-anim app-flip-in' : ''}`}
         aria-busy={navigation.transitionPhase !== 'idle'}
       >
-        <div className={`surface-host launcher-surface-host ${navigation.surface === 'launcher' ? '' : 'view-hidden'}`}>
+        <div className={`surface-host launcher-surface-host ${navigation.surface === 'launcher' && !wheelchairMode ? '' : 'view-hidden'}`}>
           <LauncherHome
             settings={settings}
             profile={profile}
@@ -439,7 +428,7 @@ function LauncherShell() {
           />
         </div>
         {managerVisited.current && (
-          <div className={`surface-host manager-surface-host ${navigation.surface === 'manager' ? '' : 'view-hidden'}`}>
+          <div className={`surface-host manager-surface-host ${navigation.surface === 'manager' && !wheelchairMode ? '' : 'view-hidden'}`}>
           <div className="app-shell">
           <AppHeader
             runtime={store.runtime}
@@ -717,6 +706,20 @@ function LauncherShell() {
           </button>
           </div>
         )}
+      {wheelchairMode && (
+        <div className="surface-host wheelchair-surface-host">
+          <WheelchairMode
+            store={store}
+            flip={modeFlip}
+            onImportPack={() => { void handlePackImport() }}
+            onOpenLauncherUpdate={() => setUpdateOpen(true)}
+            onOpenHarness={openHarness}
+            onOpenDeveloper={() => { setWheelchairMode(false); navigation.showManager(); setCopilotOpen(true) }}
+            onOpenSettings={() => setSettingsOpen(true)}
+            onExit={exitWheelchair}
+          />
+        </div>
+      )}
       </div>
 
       {settingsOpen && (
@@ -833,19 +836,6 @@ function LauncherShell() {
         />
       )}
 
-      {wheelchairMode && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: '#276f91', overflow: 'hidden', borderRadius: 12 }}>
-          <WheelchairMode
-            store={store}
-            flip={modeFlip}
-            onImportPack={() => { void handlePackImport() }}
-            onOpenLauncherUpdate={() => setUpdateOpen(true)}
-            onOpenHarness={openHarness}
-            onOpenDeveloper={() => { setCopilotOpen(true) }}
-            onExit={exitWheelchair}
-          />
-        </div>
-      )}
       {store.toast && <Toast toast={store.toast} onClose={store.dismissToast} />}
     </>
   )

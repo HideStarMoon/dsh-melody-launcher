@@ -1,6 +1,7 @@
 import { BrowserWindow, type Rectangle } from 'electron'
 
 const SHADOW_MARGIN = 30
+const SHADOW_SETTLE_DELAY = 80
 const SHADOW_HTML = `<!doctype html>
 <html>
   <head>
@@ -10,9 +11,8 @@ const SHADOW_HTML = `<!doctype html>
       .shadow {
         position: absolute;
         inset: ${SHADOW_MARGIN}px;
-        border-radius: 14px;
-        box-shadow: 0 10px 28px rgba(22, 32, 26, .25), 0 2px 9px rgba(22, 32, 26, .16);
-        background: #171b18;
+        border-radius: 12px;
+        box-shadow: 0 0 2px rgba(22, 32, 26, .16), 0 4px 20px rgba(22, 32, 26, .20);
       }
     </style>
   </head>
@@ -40,7 +40,8 @@ export function attachWindowShadow(window: BrowserWindow): void {
   if (process.platform !== 'win32' || window.isDestroyed() || controllers.has(window)) return
 
   const shadow = new BrowserWindow({
-    ...shadowBounds(window.getBounds()),
+    ...shadowBounds(window.getContentBounds()),
+    useContentSize: true,
     backgroundColor: '#00000000',
     transparent: true,
     frame: false,
@@ -62,17 +63,44 @@ export function attachWindowShadow(window: BrowserWindow): void {
   })
   shadow.setMenuBarVisibility(false)
   shadow.setIgnoreMouseEvents(true)
-  void shadow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(SHADOW_HTML)}`)
+
+  let ready = false
+  let settleTimer: ReturnType<typeof setTimeout> | null = null
+  const hide = () => {
+    if (settleTimer) clearTimeout(settleTimer)
+    settleTimer = null
+    if (!shadow.isDestroyed()) shadow.hide()
+  }
+  // Separate native windows repaint asynchronously. Keep the shadow offscreen
+  // until both surfaces have settled instead of showing a detached old edge.
+  const hideUntilSettled = () => {
+    hide()
+    settleTimer = setTimeout(() => {
+      settleTimer = null
+      if (!window.isDestroyed() && window.isFocused()) controller.showBehind()
+    }, SHADOW_SETTLE_DELAY)
+  }
 
   const controller: WindowShadowController = {
     shadow,
     sync() {
       if (window.isDestroyed() || shadow.isDestroyed()) return
-      shadow.setBounds(shadowBounds(window.getBounds()), false)
+      const target = shadowBounds(window.getContentBounds())
+      const current = shadow.getContentBounds()
+      if (current.x === target.x && current.y === target.y
+        && current.width === target.width && current.height === target.height) return
+      hideUntilSettled()
+      shadow.setContentBounds(target, false)
+      shadow.webContents.invalidate()
     },
     showBehind() {
-      if (window.isDestroyed() || shadow.isDestroyed() || window.isMinimized() || !window.isVisible()) return
+      if (!ready || window.isDestroyed() || shadow.isDestroyed()) return
+      if (window.isMinimized() || window.isMaximized() || window.isFullScreen() || !window.isVisible()) {
+        hide()
+        return
+      }
       this.sync()
+      if (settleTimer) return
       shadow.showInactive()
       // Raise both windows as a pair. Moving only the main window leaves the
       // shadow behind other applications; moveAbove(shadow) can instead demote
@@ -87,21 +115,33 @@ export function attachWindowShadow(window: BrowserWindow): void {
 
   const sync = () => controller.sync()
   const showBehind = () => controller.showBehind()
-  const hide = () => {
-    if (!shadow.isDestroyed()) shadow.hide()
-  }
 
+  window.on('will-move', hideUntilSettled)
+  window.on('will-resize', hideUntilSettled)
   window.on('move', sync)
   window.on('resize', sync)
+  window.on('moved', sync)
+  window.on('resized', sync)
   window.on('focus', showBehind)
   window.on('show', showBehind)
   window.on('restore', showBehind)
   window.on('hide', hide)
   window.on('minimize', hide)
+  window.on('maximize', hide)
+  window.on('unmaximize', showBehind)
+  window.on('enter-full-screen', hide)
+  window.on('leave-full-screen', showBehind)
   window.once('closed', () => {
+    hide()
     controllers.delete(window)
     if (!shadow.isDestroyed()) shadow.destroy()
   })
+
+  shadow.webContents.once('did-finish-load', () => {
+    ready = true
+    showBehind()
+  })
+  void shadow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(SHADOW_HTML)}`)
 }
 
 export function syncWindowShadow(window: BrowserWindow): void {

@@ -130,7 +130,7 @@ export function createMainWindow(options: CreateWindowOptions): BrowserWindow {
     // thickFrame: the latter stays disabled to avoid the black activation
     // outline, while roundedCorners restores the v0.1.1 window silhouette.
     roundedCorners: true,
-    hasShadow: true,
+    hasShadow: process.platform !== 'win32',
     icon: options.iconPath,
     title: 'DSH Launcher',
     show: false,
@@ -143,9 +143,9 @@ export function createMainWindow(options: CreateWindowOptions): BrowserWindow {
   })
 
   window.setMenuBarVisibility(false)
-  // DWM 原生阴影跟随窗口矩形（方角），在圆角壳外显形为白色方角——
-  // 圆角阴影由 window-shadow.ts 的独立阴影窗提供（跟随圆角形状），此处关闭原生阴影。
-  window.setHasShadow(false)
+  // Windows uses one custom rounded shadow; a second native outline does not
+  // follow the renderer's transparent corners.
+  window.setHasShadow(process.platform !== 'win32')
   window.once('closed', options.onClosed)
   attachWindowShadow(window)
   window.once('ready-to-show', () => {

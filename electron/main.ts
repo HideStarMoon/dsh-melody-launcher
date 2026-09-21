@@ -1,7 +1,5 @@
 import { app, BrowserWindow, net, protocol, safeStorage, shell } from 'electron'
 
-// TEMP 调试
-app.commandLine.appendSwitch('remote-debugging-port', '9222')
 import { existsSync } from 'node:fs'
 import { cp, mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import os from 'node:os'
