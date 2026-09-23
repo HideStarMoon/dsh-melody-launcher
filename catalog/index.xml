@@ -16,6 +16,7 @@
   <repository name="huangziyuan-general/dsh-novel-forge" branch="main" updated="2026-09-21T11:03:02Z" tags="plugin"/>
   <repository name="cnkids/dsh-office-toolkit" branch="main" updated="2026-09-20T16:05:28Z" tags="plugin"/>
   <repository name="whiteguo233/dsh-openbiliclaw" branch="main" updated="2026-08-23T08:33:26Z" tags="plugin,skill"/>
+  <repository name="xiaozhe7772222/dsh-opencode-zen" branch="main" updated="2026-09-21T20:30:11Z" tags="plugin"/>
   <repository name="HuanLinOTO/dsh-plugin-anti-ads" branch="master" updated="2026-08-17T02:18:27Z" tags="plugin"/>
   <repository name="yjh051108/dsh-routing-suite" branch="main" updated="2026-09-22T07:45:10Z" tags="plugin"/>
   <repository name="zhu1090093659/dsh-web-ui" branch="dev" updated="2026-08-22T09:02:17Z" tags="plugin,skill"/>
@@ -29,6 +30,7 @@
   <repository name="liustack/modlens" branch="main" updated="2026-08-22T08:32:36Z" tags="plugin,skill"/>
   <repository name="nexu-io/open-design" branch="main" updated="2026-08-22T16:44:58Z" tags="plugin"/>
   <repository name="whiteguo233/OpenBiliClaw" branch="main" updated="2026-08-24T13:05:57Z" tags="skill"/>
+  <repository name="FishBottle7/opencode2dsh" branch="master" updated="2026-09-22T14:29:30Z" tags="plugin"/>
   <repository name="ZSeven-W/openpencil" branch="main" updated="2026-08-22T08:12:58Z" tags="invalid"/>
   <repository name="volcengine/OpenViking" branch="main" updated="2026-08-22T09:08:06Z" tags="plugin,skill"/>
   <repository name="LiPu-jpg/Openwrite" branch="main" updated="2026-09-22T06:54:16Z" tags="plugin,skill"/>
